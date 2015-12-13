@@ -12,14 +12,20 @@ class Neural_Network(object):
         
         #Weights (parameters)
         self.W1 = np.random.randn(self.inputLayerSize,self.hiddenLayerSize)
-        self.W2 = np.random.randn(self.hiddenLayerSize,self.outputLayerSize)
+        self.W2 = np.random.randn(self.hiddenLayerSize,self.hiddenLayerSize)
+        self.W3 = np.random.randn(self.hiddenLayerSize,self.hiddenLayerSize)
+        self.W4 = np.random.randn(self.hiddenLayerSize,self.outputLayerSize)
         
     def forward(self, X):
         #Propogate inputs though network
         self.z2 = np.dot(X, self.W1)
         self.a2 = self.sigmoid(self.z2)
         self.z3 = np.dot(self.a2, self.W2)
-        yHat = self.sigmoid(self.z3)
+        self.a3 = self.sigmoid(self.z3)
+        self.z4 = np.dot(self.a3, self.W3)
+        self.a4 = self.sigmoid(self.z4)
+        self.z5 = np.dot(self.a4, self.W4)
+        yHat = self.sigmoid(self.z5)
         return yHat
         
     def sigmoid(self, z):
@@ -40,18 +46,24 @@ class Neural_Network(object):
         #Compute derivative with respect to W and W2 for a given X and y:
         self.yHat = self.forward(X)
         
-        delta3 = np.multiply(-(y-self.yHat), self.sigmoidPrime(self.z3))
-        dJdW2 = np.dot(self.a2.T, delta3)
+        delta5 = np.multiply(-(y-self.yHat), self.sigmoidPrime(self.z5))
+        dJdW4 = np.dot(self.a4.T, delta5)
         
+        delta4 = np.dot(delta5, self.W4.T)*self.sigmoidPrime(self.z4)
+        dJdW3 = np.dot(X.T, delta4)  
+
+        delta3 = np.dot(delta4, self.W3.T)*self.sigmoidPrime(self.z3)
+        dJdW2 = np.dot(X.T, delta3)  
+
         delta2 = np.dot(delta3, self.W2.T)*self.sigmoidPrime(self.z2)
         dJdW1 = np.dot(X.T, delta2)  
         
-        return dJdW1, dJdW2
+        return dJdW1, dJdW2, dJdW3, dJdW4
     
     #Helper Functions for interacting with other classes:
     def getParams(self):
         #Get W1 and W2 unrolled into vector:
-        params = np.concatenate((self.W1.ravel(), self.W2.ravel()))
+        params = np.concatenate((self.W1.ravel(), self.W2.ravel(), self.W3.ravel(), self.W4.ravel()))
         return params
     
     def setParams(self, params):
@@ -59,12 +71,16 @@ class Neural_Network(object):
         W1_start = 0
         W1_end = self.hiddenLayerSize * self.inputLayerSize
         self.W1 = np.reshape(params[W1_start:W1_end], (self.inputLayerSize , self.hiddenLayerSize))
-        W2_end = W1_end + self.hiddenLayerSize*self.outputLayerSize
-        self.W2 = np.reshape(params[W1_end:W2_end], (self.hiddenLayerSize, self.outputLayerSize))
+        W2_end = W1_end + self.hiddenLayerSize*self.hiddenLayerSize
+        self.W2 = np.reshape(params[W1_end:W2_end], (self.hiddenLayerSize, self.hiddenLayerSize))
+        W3_end = W2_end + self.hiddenLayerSize*self.hiddenLayerSize
+        self.W3 = np.reshape(params[W2_end:W3_end], (self.hiddenLayerSize, self.hiddenLayerSize))
+        W4_end = W3_end + self.hiddenLayerSize*self.outputLayerSize
+        self.W4 = np.reshape(params[W3_end:W4_end], (self.hiddenLayerSize, self.outputLayerSize))
         
     def computeGradients(self, X, y):
-        dJdW1, dJdW2 = self.costFunctionPrime(X, y)
-        return np.concatenate((dJdW1.ravel(), dJdW2.ravel()))
+        dJdW1, dJdW2, dJdW3, dJdW4 = self.costFunctionPrime(X, y)
+        return np.concatenate((dJdW1.ravel(), dJdW2.ravel(), dJdW3.ravel(), dJdW4.ravel()))
 
 def computeNumericalGradient(N, X, y):
         paramsInitial = N.getParams()
