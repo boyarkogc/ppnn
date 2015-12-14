@@ -3,12 +3,22 @@ import random
 
 VECTOR_SIZE = 5
 
+'''
+# X = (hours sleeping, hours studying), y = Score on test
+X = np.array(([3,5,8], [5,1,8], [10,2,2]), dtype=float)
+y = np.array(([75], [82], [93]), dtype=float)
+
+# Normalize
+X = X/np.amax(X, axis=0)
+y = y/100 #Max test score is 100
+'''
+
 class Neural_Network(object):
     def __init__(self):
         #Define Hyperparameters
         self.inputLayerSize = VECTOR_SIZE
         self.outputLayerSize = 1
-        self.hiddenLayerSize = 26
+        self.hiddenLayerSize = VECTOR_SIZE
         
         #Weights (parameters)
         self.W1 = np.random.randn(self.inputLayerSize,self.hiddenLayerSize)
@@ -163,18 +173,18 @@ convert secondary structures into integers - 0 for helixes, 1 for beta sheets, 2
 '''
 def secondary_structure_code(structure):
     if structure in ('G', 'H', 'I', 'T'):
-        return 0
-    elif structure in ('E', 'B'):
-        return 0.5
+        return 0.1
+    #elif structure in ('E', 'B'):
+    #    return 0.5
     else:#most likely 'C', 'S', ' ', or '-', barring error in file
-        return 1
+        return 0.9
 
 def dssp_parser(filename):
     protein = ""
     secondary_structures = ""
     match_dictionary = {}
     sequence = 1 #indicates whether current sequence in file is protein or secondary structures
-    count = 0
+    #count = 0
 
     with open(filename, "r") as fo:
         for line in fo:
@@ -187,7 +197,7 @@ def dssp_parser(filename):
                 sequence = 1
             else:
                 sequence = 0
-                count += 1
+                #count += 1
                 for index in range(len(protein)):
                     window = ""
                     if index == 0:
@@ -206,13 +216,13 @@ def dssp_parser(filename):
                     match_dictionary[window] = secondary_structures[index]
                 protein = ""
                 secondary_structures = ""
-    return match_dictionary, count
+    return match_dictionary
 
 def nn_dict_converter(dict):
     amino_acid_codes = []
     secondary_structures = []
     for key, value in dict.iteritems():
-       amino_acid_codes.append(char_code_vector(key))
+       amino_acid_codes.append(rand_vector(VECTOR_SIZE))################or char_code_vector
        secondary_structures.append([secondary_structure_code(value)])
 
     a = np.array(amino_acid_codes)
@@ -222,6 +232,7 @@ def nn_dict_converter(dict):
 
 def classify(yHat):
     classified = []
+    '''
     for i in yHat:
         if i <= 0.333333333:
             classified.append(0)
@@ -229,6 +240,12 @@ def classify(yHat):
             classified.append(0.5)
         else:
             classified.append(1)
+    '''
+    for i in yHat:
+        if i <= 0.5:
+            classified.append(0.1)
+        else:
+            classified.append(0.9)
     return classified
 
 def accuracy_checker(output, real_values):
