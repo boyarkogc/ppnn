@@ -1,14 +1,17 @@
 import numpy as np
 import random
 
-VECTOR_SIZE = 5
+VECTOR_SIZE = 10
+
+sequence_codes = {}
+char_codes = {}
 
 class Neural_Network(object):
     def __init__(self):
         #Define Hyperparameters
         self.inputLayerSize = VECTOR_SIZE
         self.outputLayerSize = 1
-        self.hiddenLayerSize = 26
+        self.hiddenLayerSize = 20
         
         #Weights (parameters)
         self.W1 = np.random.randn(self.inputLayerSize,self.hiddenLayerSize)
@@ -121,7 +124,7 @@ class trainer(object):
         
         params0 = self.N.getParams()
 
-        options = {'maxiter': 400, 'disp' : True}
+        options = {'maxiter': 1000, 'disp' : True}
         _res = optimize.minimize(self.costFunctionWrapper, params0, jac=True, method='BFGS', \
                                  args=(X, y), options=options, callback=self.callbackF)
 
@@ -135,11 +138,16 @@ def rand_vector(length):
     return [random.random() for i in range(length)]
 
 def char_code_vector(window):
-    coded_vector = []
-    for c in window:
-        code = ord(c) % 65 / 26.0
-        if code == 0: code += 0.01
-        coded_vector.append(code)
+    coded_vector = [0,0,0,0,0]
+    count = 0
+    w = window[:]
+    for c in w:
+        if c in char_codes:
+            coded_vector[count] = char_codes[c]
+        else:
+            char_codes[c] = random.random()
+            coded_vector[count] = char_codes[c]
+    count += 1
     return coded_vector
 
 '''
@@ -147,18 +155,20 @@ convert secondary structures into integers - 0 for helixes, 1 for beta sheets, 2
 '''
 def secondary_structure_code(structure):
     if structure in ('G', 'H', 'I', 'T'):
-        return 0
+        return 0.1
     elif structure in ('E', 'B'):
         return 0.5
     else:#most likely 'C', 'S', ' ', or '-', barring error in file
-        return 1
+        return 0.9
 
 def dssp_parser(filename):
     protein = ""
     secondary_structures = ""
-    match_dictionary = {}
+    pro_array = []
+    sec_array = []
+    pro_seq = {}
     sequence = 1 #indicates whether current sequence in file is protein or secondary structures
-    count = 0
+    #count = 0
 
     with open(filename, "r") as fo:
         for line in fo:
@@ -171,7 +181,7 @@ def dssp_parser(filename):
                 sequence = 1
             else:
                 sequence = 0
-                count += 1
+                #count += 1
                 for index in range(len(protein)):
                     window = ""
                     if index == 0:
@@ -187,32 +197,48 @@ def dssp_parser(filename):
                     #print protein
                     #print secondary_structures
                     #if index < len(secondary_structures):
-                    match_dictionary[window] = secondary_structures[index]
+                    pro_array.append(window)
+                    
+                    if window not in sequence_codes:
+                        sequence_codes[window] = char_code_vector(window) + rand_vector(VECTOR_SIZE/2)
+                    pro_seq[window] = sequence_codes[window]
+                    
+                    #pro_seq[window] = char_code_vector(window) #rand_vector(VECTOR_SIZE) #
+                    sec_array.append(secondary_structures[index])
                 protein = ""
                 secondary_structures = ""
-    return match_dictionary, count
-
-def nn_dict_converter(dict):
     amino_acid_codes = []
     secondary_structures = []
-    for key, value in dict.iteritems():
-       amino_acid_codes.append(char_code_vector(key))
+    for i in range(len(pro_array)):
+       amino_acid_codes.append(pro_seq[pro_array[i]])
+       secondary_structures.append([secondary_structure_code(sec_array[i])])
+
+    a = np.array(amino_acid_codes)
+    s = np.array(secondary_structures)
+    #a = a/np.amax(a, axis=0)
+    return a, s
+'''
+def nn_dict_converter(pro_array, sec_array):
+    amino_acid_codes = []
+    secondary_structures = []
+    for i in range(len(pro_array)):
+       amino_acid_codes.append(rand_vector(VECTOR_SIZE))
        secondary_structures.append([secondary_structure_code(value)])
 
     a = np.array(amino_acid_codes)
     s = np.array(secondary_structures)
     #a = a/np.amax(a, axis=0)
     return a, s
-
+'''
 def classify(yHat):
     classified = []
     for i in yHat:
-        if i <= 0.333333333:
-            classified.append(0)
-        elif i <= 0.66666666:
+        if i <= 0.366666667:
+            classified.append(0.1)
+        elif i <= 0.633333333:
             classified.append(0.5)
         else:
-            classified.append(1)
+            classified.append(0.9)
     return classified
 
 def accuracy_checker(output, real_values):
