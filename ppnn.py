@@ -10,7 +10,7 @@ class Neural_Network(object):
     def __init__(self):
         #Define Hyperparameters
         self.inputLayerSize = VECTOR_SIZE
-        self.outputLayerSize = 1
+        self.outputLayerSize = 3
         self.hiddenLayerSize = 20
         
         #Weights (parameters)
@@ -106,7 +106,7 @@ class trainer(object):
         
     def callbackF(self, params):
         self.N.setParams(params)
-        self.J.append(self.N.costFunction(self.X, self.y))   
+        self.J.append(self.N.costFunction(self.X, self.y))
         
     def costFunctionWrapper(self, params, X, y):
         self.N.setParams(params)
@@ -155,11 +155,11 @@ convert secondary structures into integers - 0 for helixes, 1 for beta sheets, 2
 '''
 def secondary_structure_code(structure):
     if structure in ('G', 'H', 'I', 'T'):
-        return 0.1
+        return [1,0,0]
     elif structure in ('E', 'B'):
-        return 0.5
+        return [0,1,0]
     else:#most likely 'C', 'S', ' ', or '-', barring error in file
-        return 0.9
+        return [0,0,1]
 
 def dssp_parser(filename):
     protein = ""
@@ -211,7 +211,7 @@ def dssp_parser(filename):
     secondary_structures = []
     for i in range(len(pro_array)):
        amino_acid_codes.append(pro_seq[pro_array[i]])
-       secondary_structures.append([secondary_structure_code(sec_array[i])])
+       secondary_structures.append(secondary_structure_code(sec_array[i]))
 
     a = np.array(amino_acid_codes)
     s = np.array(secondary_structures)
